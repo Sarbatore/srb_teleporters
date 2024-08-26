@@ -2,7 +2,7 @@ Citizen.CreateThread(function()
     local promptGroup = UipromptGroup:new("")
     local prompt = Uiprompt:new(Config.teleportersKey, "", promptGroup)
     :setOnControlJustPressed(function(p, playerPed, coords)
-        SetEntityCoordsAndHeading(playerPed, coords.x, coords.y, coords.z, coords.h)
+        SetEntityCoordsAndHeading(playerPed, coords)
     end)
 
     local nearestTeleporter = nil
@@ -18,7 +18,7 @@ Citizen.CreateThread(function()
         local playerPed = PlayerPedId()
 
         -- Reset nearest teleporter if too far
-        if (nearestTeleporter) and (#(GetEntityCoords(playerPed) - nearestTeleporter.pos) > nearestTeleporter.distanceToShow) then
+        if (nearestTeleporter) and (#(GetEntityCoords(playerPed) - nearestTeleporter.fromCoords) > nearestTeleporter.distanceToShow) then
             nearestTeleporter = nil
         end
 
@@ -26,7 +26,7 @@ Citizen.CreateThread(function()
         if (not IsEntityDead(playerPed)) then
             if (not nearestTeleporter) then
                 for _, v in ipairs(Config.teleporters) do
-                    local distance = #(GetEntityCoords(playerPed) - v.pos)
+                    local distance = #(GetEntityCoords(playerPed) - v.fromCoords)
     
                     if (distance <= v.distanceToShow) then
                         promptGroup:setText(v.press)
@@ -43,7 +43,7 @@ Citizen.CreateThread(function()
         -- Show prompt if near teleporter
         if (nearestTeleporter) then
             promptGroup:setActiveThisFrame()
-            promptGroup:handleEvents(playerPed, nearestTeleporter.goTo)
+            promptGroup:handleEvents(playerPed, nearestTeleporter.toCoords)
 
             sleep = false
         else
