@@ -1,6 +1,6 @@
 Config = {}
 
-Config.teleportersKey = 0x760A9C6F -- Key to press to teleport
+Config.controlKey = 0x760A9C6F -- Key to press to teleport
 
 Config.teleporters = { -- Teleporters coords
     {
