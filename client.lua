@@ -1,9 +1,42 @@
+local prompt = 0
+
+AddEventHandler("onResourceStop", function(resource)
+    if (GetCurrentResourceName() ~= resource) then return end
+
+    PromptDelete(prompt)
+end)
+
+---Return whether the player is near a teleporter
+---@param teleporter table
+---@return boolean
+local function IsNearTeleporter(teleporter)
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local distance = #(playerCoords - teleporter.fromCoords)
+
+    return distance <= teleporter.distanceToShow
+end
+
+---Return the nearest teleporter
+---@return table
+local function GetNearestTeleporter()
+    for _, teleporter in ipairs(Config.teleporters) do
+        if (IsNearTeleporter(teleporter)) then
+            return teleporter
+        end
+    end
+    return nil
+end
+
 Citizen.CreateThread(function()
-    local promptGroup = UipromptGroup:new("")
-    local prompt = Uiprompt:new(Config.teleportersKey, "", promptGroup)
-    :setOnControlJustPressed(function(p, playerPed, coords)
-        SetEntityCoordsAndHeading(playerPed, coords)
-    end)
+    local promptGroup = GetRandomIntInRange(0, 0xffffff)
+    prompt = PromptRegisterBegin()
+        UiPromptSetControlAction(prompt, Config.controlKey)
+        UiPromptSetText(prompt, VarString(10, "LITERAL_STRING", ""))
+        UiPromptSetEnabled(prompt, true)
+        UiPromptSetVisible(prompt, true)
+        UiPromptSetStandardMode(prompt, true)
+        UiPromptSetGroup(prompt, promptGroup, 0)
+    UiPromptRegisterEnd(prompt)
 
     local nearestTeleporter = nil
 
@@ -12,42 +45,34 @@ Citizen.CreateThread(function()
         if (sleep) then
             Citizen.Wait(1000)
         else
-            Citizen.Wait(5)
+            Citizen.Wait(0)
         end
+
+        sleep = true
 
         local playerPed = PlayerPedId()
 
         -- Reset nearest teleporter if too far
-        if (nearestTeleporter) and (#(GetEntityCoords(playerPed) - nearestTeleporter.fromCoords) > nearestTeleporter.distanceToShow) then
+        if (nearestTeleporter) and (not IsNearTeleporter(nearestTeleporter)) then
             nearestTeleporter = nil
         end
 
         -- Update prompt if near teleporter
         if (not IsEntityDead(playerPed)) then
-            if (not nearestTeleporter) then
-                for _, v in ipairs(Config.teleporters) do
-                    local distance = #(GetEntityCoords(playerPed) - v.fromCoords)
-    
-                    if (distance <= v.distanceToShow) then
-                        promptGroup:setText(v.press)
-                        prompt:setText(v.promptName)
-
-                        nearestTeleporter = v
-    
-                        break
-                    end
-                end
+            nearestTeleporter = GetNearestTeleporter()
+            if (nearestTeleporter) then
+                PromptSetText(prompt, VarString(10, "LITERAL_STRING", nearestTeleporter.promptName))
             end
         end
 
         -- Show prompt if near teleporter
         if (nearestTeleporter) then
-            promptGroup:setActiveThisFrame()
-            promptGroup:handleEvents(playerPed, nearestTeleporter.toCoords)
-
             sleep = false
-        else
-            sleep = true
+
+            PromptSetActiveGroupThisFrame(promptGroup, VarString(10, "LITERAL_STRING", nearestTeleporter.press))
+            if (PromptIsJustPressed(prompt)) then
+                SetEntityCoordsAndHeading(playerPed, nearestTeleporter.toCoords)
+            end
         end
     end
 end)
